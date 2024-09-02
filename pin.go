@@ -2,10 +2,13 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"io"
+	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 )
@@ -21,32 +24,47 @@ type model struct {
 }
 
 func main() {
-	stat, err := os.Stdin.Stat()
-	if err != nil {
-		panic(err)
-	}
 
-	if stat.Mode()&os.ModeNamedPipe == 0 && stat.Size() == 0 {
-		fmt.Println("Try piping in some text.")
-		os.Exit(1)
-	}
+	devMode := flag.Bool("dev", false, "Development test mode")
+	flag.Parse()
 
-	reader := bufio.NewReader(os.Stdin)
-	var b strings.Builder
-
-	for {
-		r, _, err := reader.ReadRune()
-		if err != nil && err == io.EOF {
-			break
-		}
-		_, err = b.WriteRune(r)
+	var inputString string
+	if *devMode {
+		content, err := ioutil.ReadFile("data/test.diff")
 		if err != nil {
-			fmt.Println("Error getting input:", err)
+			log.Fatalf("Failed to read test file: data/test.diff")
+		}
+		inputString = string(content)
+	} else {
+		// read from pipe and do stuff. Normal operation
+		stat, err := os.Stdin.Stat()
+		if err != nil {
+			panic(err)
+		}
+
+		if stat.Mode()&os.ModeNamedPipe == 0 && stat.Size() == 0 {
+			fmt.Println("Try piping in some text.")
 			os.Exit(1)
 		}
+
+		reader := bufio.NewReader(os.Stdin)
+		var b strings.Builder
+
+		for {
+			r, _, err := reader.ReadRune()
+			if err != nil && err == io.EOF {
+				break
+			}
+			_, err = b.WriteRune(r)
+			if err != nil {
+				fmt.Println("Error getting input:", err)
+				os.Exit(1)
+			}
+		}
+		inputString = strings.TrimSpace(b.String())
 	}
 
-	model := newModel(strings.TrimSpace(b.String()))
+	model := newModel(inputString)
 
 	if _, err := tea.NewProgram(model).Run(); err != nil {
 		fmt.Println("Couldn't start program:", err)
