@@ -153,6 +153,8 @@ func (m *model) View() string {
 
 func (m *model) transformDiff() {
 	var b strings.Builder
+	b.WriteString("# howto: patch new_file < diff.pin\n")
+	b.WriteString("# --- Output not correct yet. wip. ----\n")
 	for i, line := range m.lines {
 		if _, ok := m.selected[i]; ok {
 			b.WriteString(line)
@@ -160,5 +162,4 @@ func (m *model) transformDiff() {
 		}
 	}
 	m.output = b.String()
-	//m.output = "test"
 }
