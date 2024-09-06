@@ -133,10 +133,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *model) View() string {
 
-	s := "Select the differences (-/+) that you want to carry over to the new file\n"
-	s += "  Navigate with arrows or j/k\n"
+	s := "------------------------------------------------------------------------\n"
+	s += "Select the differences (-/+) that you want to carry over to the new file\n"
+	s += "  Navigate with arrows or 'j' and 'k'\n"
 	s += "  Press 'space' to select/deselect\n"
 	s += "  Press 'ctrl+s' to save and quit\n"
+	s += "  Apply diff.pin using patch. ie. `patch new_file < diff.pin`\n"
 	s += "------------------------------------------------------------------------\n"
 	for i, line := range m.lines {
 		cursor := " "
