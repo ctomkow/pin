@@ -21,6 +21,7 @@ type model struct {
 	lines    []string
 	selected map[int]struct{} // which items are selected
 	cursor   int
+	output   string
 }
 
 func main() {
@@ -73,20 +74,22 @@ func main() {
 
 }
 
-func newModel(pipedInput string) (m model) {
+func newModel(pipedInput string) *model {
 
-	m.lines = strings.Split(pipedInput, "\n")
-	m.selected = make(map[int]struct{})
+	m := &model{
+		lines:    strings.Split(pipedInput, "\n"),
+		selected: make(map[int]struct{}),
+	}
 
-	return
+	return m
 }
 
-func (m model) Init() tea.Cmd {
+func (m *model) Init() tea.Cmd {
 	return nil
 }
 
 // Update called when something happens (input, etc)
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -113,13 +116,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.selected[m.cursor] = struct{}{}
 			}
+		// a case to handle when someone wants to save and quit like in vim
+		case "ctrl+s":
+			m.transformDiff()
+			err := ioutil.WriteFile("diff.pin", []byte(m.output), 0644)
+			if err != nil {
+				log.Fatalf("Failed to write output file: diff.pin")
+			}
+			return m, tea.Quit
 		}
+
 	}
 	//m.table, cmd = m.table.Update(msg)
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m *model) View() string {
 
 	s := "Select the differences (-/+) that you want to carry over to the new file\n"
 	s += "------------------------------------------------------------------------\n"
@@ -137,4 +149,16 @@ func (m model) View() string {
 
 	}
 	return s
+}
+
+func (m *model) transformDiff() {
+	var b strings.Builder
+	for i, line := range m.lines {
+		if _, ok := m.selected[i]; ok {
+			b.WriteString(line)
+			b.WriteString("\n")
+		}
+	}
+	m.output = b.String()
+	//m.output = "test"
 }
