@@ -1,4 +1,4 @@
-module pin
+module github.com/ctomkow/pin
 
 go 1.19
 
