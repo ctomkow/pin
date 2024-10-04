@@ -158,13 +158,55 @@ func (m *model) View() string {
 
 func (m *model) transformDiff() {
 	var b strings.Builder
-	b.WriteString("# howto: patch new_file < diff.pin\n")
-	b.WriteString("# --- Output not correct yet. wip. ----\n")
+
+	var inHunk bool
+
+	// Process the incoming diff
 	for i, line := range m.lines {
-		if _, ok := m.selected[i]; ok {
-			b.WriteString(line)
-			b.WriteString("\n")
+		// Handle file headers (e.g., --- and +++)
+		if strings.HasPrefix(line, "--- ") || strings.HasPrefix(line, "+++ ") {
+			// Write the header lines as they are
+			b.WriteString(line + "\n")
+			continue
 		}
+
+		// Handle hunk headers (e.g., @@ -1,9 +1,7 @@)
+		if strings.HasPrefix(line, "@@") {
+			// Swap the ranges (keep `-` and `+` but swap the values)
+			headerParts := strings.Fields(line)
+			if len(headerParts) >= 3 {
+				oldRange := headerParts[1] // -1,9
+				newRange := headerParts[2] // +1,7
+
+				// Swap the ranges: `-` first and `+` second, but swap their counts
+				b.WriteString(fmt.Sprintf("@@ -%s +%s @@\n", newRange[1:], oldRange[1:]))
+			}
+			inHunk = true
+			continue
+		}
+
+		// Process `-` lines (old file deletions)
+		if strings.HasPrefix(line, "-") && inHunk {
+			if _, ok := m.selected[i]; ok {
+				// If the line is selected (pinned), convert `-` into `+`
+				b.WriteString("+" + line[1:] + "\n") // Convert `-` to `+` for pinned lines
+			}
+			// If the `-` line is not selected, discard it (skip it)
+			continue
+		}
+
+		// Process `+` lines (new file additions)
+		if strings.HasPrefix(line, "+") {
+			// Replace `+` with a space and keep the rest of the line unchanged for proper alignment
+			b.WriteString(" " + line[1:] + "\n")
+			continue
+		}
+
+		// Handle context lines (unchanged lines)
+		// Write the context lines exactly as they are
+		b.WriteString(line + "\n")
 	}
+
+	// Store the generated diff
 	m.output = b.String()
 }
